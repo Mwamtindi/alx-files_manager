@@ -1,5 +1,5 @@
 import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
+import { redisClient } from '../utils/redis';
 
 class AppController {
   static async getStatus(req, res) {
@@ -14,8 +14,8 @@ class AppController {
     const filesCount = await dbClient.nbFiles();
 
     res.status(200).json({
-    users: usersCount,
-    files: filesCount,
+      users: usersCount,
+      files: filesCount,
     });
   }
 }
