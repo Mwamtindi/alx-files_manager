@@ -1,40 +1,65 @@
-import { MongoClient } from 'mongodb';
-import dotenv from 'dotenv';
+import { promisify } from "util";
+import { createClient } from "redis";
 
-dotenv.config();
+/**
+ * Rep a Redis client.
+ */
+class RedisClient {
+  /**
+   * Creates a new RedisClient instance.
+   */
+  constructor() {
+    this.client = createClient();
+    this.isClientConnected = true;
+    this.client.on("error", (err) => {
+      console.error(
+        "Redis client failed to connect:",
+        err.message || err.toString()
+      );
+      this.isClientConnected = false;
+    });
+    this.client.on("connect", () => {
+      this.isClientConnected = true;
+    });
+  }
 
-class DB_Client {
-    constructor() {
-        const host = process.env.DB_HOST || 'localhost';
-        const port = process.env.DB_PORT || 27017;
-        const database = process.env.DB_DATABASE || 'files_manager';
+  /**
+   * Checks if this client's connection to the Redis server is active.
+   * @returns {boolean}
+   */
+  isAlive() {
+    return this.isClientConnected;
+  }
 
-        const url = `mongodb://${host}:${port}`;
-        this.client = new MongoClient(url, { useUnifiedTopology: true });
-        this.client.connect()
-            .then(() => {
-                this.db = this.client.db(database);
-            })
-            .catch((error) => {
-                console.error('Error connecting to MongoDB:', error);
-            });
-    }
+  /**
+   * Retrieves value of a given key.
+   * @param {Str} The key of the item to retrieve.
+   * @returns {Str | Object}
+   */
+  async get(key) {
+    return promisify(this.client.GET).bind(this.client)(key);
+  }
 
-    isAlive() {
-        return this.client && this.client.topology && this.client.topology.isConnected();
-    }
+  /**
+   * Stores a key and its value along with an expiration time.
+   * @param {Str} key of the item to store.
+   * @param {Str | Num | Boolean} value The item to store.
+   * @param {Num} duration The expiration time of the item in seconds.
+   * @returns {Promise<void>}
+   */
+  async set(key, value, duration) {
+    await promisify(this.client.SETEX).bind(this.client)(key, duration, value);
+  }
 
-    async nbUsers() {
-        if (!this.isAlive()) return 0;
-        return this.db.collection('users').countDocuments();
-    }
-
-    async nbFiles() {
-        if (!this.isAlive()) return 0;
-        return this.db.collection('files').countDocuments();
-    }
+  /**
+   * Removes the value of a given key.
+   * @param {Str} The key of the item to remove.
+   * @returns {Promise<void>}
+   */
+  async del(key) {
+    await promisify(this.client.DEL).bind(this.client)(key);
+  }
 }
 
-const dbClient = new DB_Client();
-export default dbClient;
-
+export const redisClient = new RedisClient();
+export default redisClient;
