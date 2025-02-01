@@ -30,6 +30,7 @@ class UsersController {
     const result = await usersCollection.insertOne(newUser);
     return res.status(201).json({ id: result.insertedId, email });
   }
+
   static async getMe(req, res) {
     const token = req.headers['x-token'];
     if (!token) {
@@ -49,7 +50,7 @@ class UsersController {
     }
 
     return res.status(200).json({ id: user._id, email: user.email });
-   }
+  }
 }
 
 export default UsersController;
